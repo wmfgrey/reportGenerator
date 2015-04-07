@@ -1,0 +1,4 @@
+
+A program for automatically generating school reports
+
+This program writes school reports.  It requires a list of comments in a comments bank.  Also a set of grades for various student aptutides are needed.  Once these have been created the code randomly chooses a suitable comment for each pupils. Example datasets are given in the folder called files. The writeReport wrapper script helps users get started. 
