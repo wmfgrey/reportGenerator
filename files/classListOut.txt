@@ -1,4 +1,0 @@
-Bart Simpson M 1 1 1 1 1 1 1 1 1 1 1 1
-Lisa Simpson F 1 1 1 1 1 1 1 1 1 1 1 1
-Nelson Muntz M 2 2 2 2 2 2 2 2 2 2 2 2
-Ralf Wiggum M 5 5 5 5 5 5 5 5 5 5 5 5
