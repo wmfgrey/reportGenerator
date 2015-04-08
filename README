@@ -1,4 +1,35 @@
 
 A program for automatically generating school reports
 
-This program writes school reports.  It requires a list of comments in a comments bank.  Also a set of grades for various student aptutides are needed.  Once these have been created the code randomly chooses a suitable comment for each pupils. Example datasets are given in the folder called files. The writeReport wrapper script helps users get started. 
+This program writes school reports.  It requires a list of comments in a comments bank.  Also a set of grades (1-5) for various student aptutides are needed, where 1 is the highest grade and 5 the lowest grade for a given criteria.  Once these have been created the code randomly chooses a suitable comment for each pupils. Example datasets are given in the folder called files. The writeReport wrapper script helps users get started. The porgram needs to be run twice. Firstly the user needs to ghive pupils mark for effort, behaviour, level attainment and so on. Secondly you can generate reports for each pupil based on marks given.  For instance, for the first run you might use: 
+
+reportGenerator -grades classList.txt classListOut.txt 
+
+This requires you to have a text file (e.g. classList.txt) with a list of list of students needs to be in the format:
+
+<firstname> <lastname> <Gender M or F>
+Thus:
+
+Bart Simpson M 
+Lisa Simpson F 
+Nelson Muntz M
+Ralf Wiggum M 
+
+classListOut.txt will be generated and should look similar to:
+
+Bart Simpson M 1 1 1 1 1 1 1 1 1 1 1 1
+Lisa Simpson F 1 1 1 1 1 1 1 1 1 1 1 1
+Nelson Muntz M 2 2 2 2 2 2 2 2 2 2 2 2
+Ralf Wiggum M 5 5 5 5 5 5 5 5 5 5 5 5
+
+reportGenerator -reports classListOut.txt bank.txt reports.txt
+
+The number of criteria is set to 7 by default and can be up to 13 and nominally include:
+(a) effort, (b) attainment, (c) progress, (d) level, (e) behaviour, (f) punctuality, (g) organisation,   (h) independent_enquirer,(i)  creative_thinker, (j) reflective_learner, (k) team_worker, (l) self_manager and (m) effective_participant
+
+You have the option to select fewer criteria. If you wish use completely different criteria switch out one of the criteria to another and amend or create a new comments bank file.
+
+
+
+
+
