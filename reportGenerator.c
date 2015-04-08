@@ -46,7 +46,6 @@ typedef struct {
  char bankfile[MAX_NAME_LENGTH];
  int rflag;
  int gflag;
- int num_criteria;
 } clparse ;
 
 
@@ -57,6 +56,8 @@ FILE *openfile(char *, char *);
 int rnd(int);
 char *pronoun_gender(char *, char *, char *);
 char *str_replace(char *, char *, char *);
+char *strtrim(char *);
+int strRemoveAll(char *,char *);
 
 int main(int argc, char *argv[])
 {
@@ -83,7 +84,7 @@ int main(int argc, char *argv[])
  ******************************************/
 
  if(clinput.rflag == 1)
-  gen_report(&clinput); 
+  gen_report(&clinput);  
  
  return (EXIT_SUCCESS);
 
@@ -129,6 +130,16 @@ FILE *openfile(char *filename, char *rw)
   }
  
  }
+
+ else if ( !strcmp(rw, "w") ){
+ 
+  fp = fopen(filename, "w");
+  if ( fp == NULL ){
+   fprintf( stderr, "Error creating %s\n", filename);
+   exit(EXIT_FAILURE); 
+  }
+ 
+ }
  
  return fp;
 
@@ -139,39 +150,39 @@ FILE *openfile(char *filename, char *rw)
 
 /* Read in class lists and issue grades */
 
-int read_class_list (clparse *clinput)
+int read_class_list(clparse *clinput)
 {
 
- FILE *fclass, *fgrades;
- char pupil_record[MAX_LINE_LENGTH];
+ FILE *fclass, *fgrades, *fbank;
+ char record[MAX_LINE_LENGTH];
  char surname[MAX_NAME_LENGTH];
  char firstname[MAX_NAME_LENGTH];
  char gender[MAX_NAME_LENGTH];
  int i;
- int marks[MAX_NUM_CRITERIA]; 
+ int marks[MAX_NUM_CRITERIA];
+ int num_criteria=0; 
 
- char *grades[]={"effort", 
-                 "attainment",
-                 "progress", 
-                 "level", 
-                 "behaviour",
-                 "punctuality",
-                 "organisation",
-                 "independent_enquirer",
-                 "creative_thinker",
-                 "reflective_learner",
-                 "team_worker",
-                 "self_manager",
-                 "effective_participant"};
+ char grades[MAX_LINE_LENGTH][MAX_NUM_CRITERIA];
 
  fclass = openfile(clinput->classfile, "r");
- fgrades = openfile(clinput->gradesfile, "a");
+ fgrades = openfile(clinput->gradesfile, "w");
+ fbank = openfile(clinput->bankfile, "r");
 
- while (fgets(pupil_record, MAX_LINE_LENGTH, fclass) != NULL){
-  sscanf(pupil_record,"%s %s %s",firstname, surname, gender); 
+ while (fgets(record, MAX_LINE_LENGTH, fbank) != NULL){
+   if (!strncasecmp(strtrim(record),"<criteria=",4)){ 
+     strRemoveAll(record,"<criteria=\"");
+     strRemoveAll(record,"\">");
+     sscanf(strtrim(record),"%s",grades[num_criteria]);
+  /*   fprintf(stdout,"%s\n",grades[num_criteria]); */
+    num_criteria=num_criteria+1; 
+   } 
+ }
+
+ while (fgets(record, MAX_LINE_LENGTH, fclass) != NULL){
+  sscanf(record,"%s %s %s",firstname, surname, gender); 
   fprintf(stderr,"%s %s\n",firstname, surname);
   
-  for(i=0;i<clinput->num_criteria;i++){
+  for(i=0;i<num_criteria;i++){
    fprintf(stderr,"%s= ",grades[i]);
    scanf("%d",&marks[i]);
   }
@@ -179,7 +190,7 @@ int read_class_list (clparse *clinput)
   fprintf(stderr,"\n");
   
   fprintf(fgrades,"%s %s %s",firstname, surname, gender);
-  for(i=0;i<clinput->num_criteria;i++) fprintf(fgrades," %d", marks[i]);
+  for(i=0;i<num_criteria;i++) fprintf(fgrades," %d", marks[i]);
   fprintf(fgrades,"\n");
  
  }
@@ -196,14 +207,13 @@ int read_class_list (clparse *clinput)
 
 /* Generate reports based on grades */
 
-int gen_report (clparse *clinput)
+int gen_report(clparse *clinput)
 {
  
  FILE *fgrades, *freport, *fbank;
  char bank_record[MAX_LINE_LENGTH];
  char pupil_record[MAX_LINE_LENGTH];
  char comment_all[MAX_LINE_LENGTH][MAX_NUM_COMMENTS];
- char hash[1], criteria[MAX_LINE_LENGTH];
  char *pch;
  int grade, grade_all[MAX_NUM_COMMENTS], criteria_all[MAX_NUM_COMMENTS];
  int i, j, k, total_num_comments, selected_comment;
@@ -215,53 +225,50 @@ int gen_report (clparse *clinput)
  int comment_index[NUM_GRADES+1][MAX_NUM_CRITERIA+1];
  char *dest;
  char str[MAX_LINE_LENGTH];
- char *p;
-  
+ int num_criteria=0;
+ char gradeName[MAX_LINE_LENGTH][MAX_NUM_CRITERIA];
+
+ 
+ 
  fgrades = openfile(clinput->gradesfile, "r");
- freport = openfile(clinput->reportfile, "a");
+ freport = openfile(clinput->reportfile, "w");
  fbank = openfile(clinput->bankfile, "r");
  
  /* Read in comments bank*/
- 
- i=0;
- 
- 
- 
- while (fgets(bank_record, MAX_LINE_LENGTH, fbank) != NULL){
-  if (bank_record[0]!='#'){
-   strcpy(comment_all[i],bank_record);
-   grade_all[i]=grade;
-
-   if (!strncasecmp(criteria,"effort",4)) criteria_all[i]=1;  
-   else if (!strncasecmp(criteria,"attainment",4)) criteria_all[i]=2;
-   else if (!strncasecmp(criteria,"progress",4)) criteria_all[i]=3;
-   else if (!strncasecmp(criteria,"level",4)) criteria_all[i]=4;
-   else if (!strncasecmp(criteria,"behaviour",4)) criteria_all[i]=5;
-   else if (!strncasecmp(criteria,"punctuality",4)) criteria_all[i]=6;
-   else if (!strncasecmp(criteria,"organisation",4)) criteria_all[i]=7;
-   else if (!strncasecmp(criteria,"independent_enquirer",4)) criteria_all[i]=8;
-   else if (!strncasecmp(criteria,"creative_thinker",4)) criteria_all[i]=9;
-   else if (!strncasecmp(criteria,"reflective_learner",4)) criteria_all[i]=10;
-   else if (!strncasecmp(criteria,"team_worker",4)) criteria_all[i]=11;
-   else if (!strncasecmp(criteria,"self_manager",4)) criteria_all[i]=12;
-   else if (!strncasecmp(criteria,"effective_participant",4)) criteria_all[i]=13;
-
-   i++;  
-  }
-  else{
-   sscanf(bank_record,"%s %s %d",hash, criteria ,&grade); 
   
-  }    
- }
+ i=0;
+ while (fgets(bank_record, MAX_LINE_LENGTH, fbank) != NULL){
  
+  if (!strncasecmp(strtrim(bank_record),"<comment>",4)){
+    strRemoveAll(bank_record,"<comment>");
+    strcpy(comment_all[i],strtrim(bank_record));
+    grade_all[i]=grade;
+    criteria_all[i]=num_criteria;
+    i=i+1;   
+   }
+   
+  else if (!strncasecmp(strtrim(bank_record),"<criteria=",4)){ 
+   strRemoveAll(bank_record,"<criteria=\"");
+   strRemoveAll(bank_record,"\">");
+   sscanf(strtrim(bank_record),"%s",gradeName[num_criteria]); 
+   num_criteria=num_criteria+1;
+  }
+   
+  else if (!strncasecmp(strtrim(bank_record),"<grade=",4)){
+    strRemoveAll(bank_record,"<grade=\"");
+    strRemoveAll(bank_record,"\">");
+    sscanf(strtrim(bank_record),"%d",&grade); 
+   } 
+ }
+
  /* calculate how many comments there are per
     grade and per criteria.  This is needed for 
     input into the random function.  */
-
- total_num_comments=i;
  
+ total_num_comments=i;
+
  for (i=0; i<NUM_GRADES+1; i++){ 
-  for (j=0; j<clinput->num_criteria+1; j++){
+  for (j=0; j<num_criteria+1; j++){
     comments_num[i][j]=0;
     comment_index[i][j]=-999;
   }
@@ -272,6 +279,7 @@ int gen_report (clparse *clinput)
   if (comment_index[grade_all[k]][criteria_all[k]] == -999)
     comment_index[grade_all[k]][criteria_all[k]]=k;
  }
+ 
  
 
  while (fgets(pupil_record, MAX_LINE_LENGTH, fgrades) != NULL){
@@ -299,39 +307,33 @@ int gen_report (clparse *clinput)
  
 
   fprintf(freport,"%s %s %s",firstname, surname, gender);
-  for(k=0;k<clinput->num_criteria;k++) fprintf(freport," %d", marks[k]);
+  for(k=0;k<num_criteria;k++) fprintf(freport," %s:%d ", gradeName[k], marks[k]);
   fprintf(freport,"\n");
 
   /* look at pupils grades then allocate 
      random but relevant comment */
   
   
-  for (j=0; j<clinput->num_criteria; j++){
+  for (j=0; j<num_criteria; j++){
   
    if( comments_num[marks[j]][j+1] != 0 ){
-    
-    selected_comment=rnd(comments_num[marks[j]][j+1]); 
-    
+   
+    selected_comment=rnd(comments_num[marks[j]][j+1]);      
     strcpy(str,comment_all[comment_index[marks[j]][j+1]+selected_comment-1]);
-   
-   
-    dest=pronoun_gender(gender,firstname,str);
-     
-     p = strchr(dest,'\n');
-    *p = '\0';
-     
+    dest=pronoun_gender(gender,firstname,str); 
     fprintf(freport,"%s ",dest);
-      
-   }
-      
+       
+   } 
+     
   }
-  
+ 
 
   fprintf(freport,"\n\n");
-  
+   
  }
  
- 
+
+
 
  fclose(fgrades);
  fclose(freport);
@@ -358,20 +360,19 @@ void read_clinput(int argc, char **argv, clparse *clinput)
   
  clinput->rflag=0;
  clinput->gflag=0;
- clinput->num_criteria=7;
  
  if (strncasecmp(argv[ 1 ], "-reports",   2) != 0 &&
           strncasecmp(argv[ 1 ], "--reports",  3)  != 0 &&
           strncasecmp(argv[ 1 ], "-grades",   2)  != 0 &&
           strncasecmp(argv[ 1 ], "--grades",  3) != 0) print_usage=1;
 
- if (argc < 4) print_usage=1;
+ if (argc < 5) print_usage=1;
 
  if (print_usage) {
   fprintf(stderr,"Usage: %s [options]\n",argv[0]);
   fprintf(stderr,"options:\n\n");
-  fprintf(stderr," -grades  <class list file (in)> <grade list file (out)> [num_criteria]\n");  	
-  fprintf(stderr," -reports <grade list file (in)> <comments bank file (in)>  <report file out> [num_criteria]\n\n");
+  fprintf(stderr," -grades  <class list file (in)> <comments bank file (in)> <grade list file (out)> \n");  	
+  fprintf(stderr," -reports <grade list file (in)> <comments bank file (in)> <report file out> \n\n");
   exit(EXIT_FAILURE);
  }  
 
@@ -379,8 +380,8 @@ void read_clinput(int argc, char **argv, clparse *clinput)
      !strncasecmp(argv[ 1 ], "--grades",  3)) {
     clinput->gflag=1;
     strcpy(clinput->classfile, argv[ 2 ]);
-    strcpy(clinput->gradesfile, argv[ 3 ]);
-    if (argc==5) clinput->num_criteria=atoi(argv[ 4 ]);
+    strcpy(clinput->bankfile, argv[ 3 ]);
+    strcpy(clinput->gradesfile, argv[ 4 ]);
     }
 
 if( !strncasecmp(argv[ 1 ], "-reports",   2) || 
@@ -389,8 +390,11 @@ if( !strncasecmp(argv[ 1 ], "-reports",   2) ||
     strcpy(clinput->gradesfile, argv[ 2 ]);
     strcpy(clinput->bankfile, argv[ 3 ]);
     strcpy(clinput->reportfile, argv[ 4 ]);
-    if (argc==6) clinput->num_criteria=atoi(argv[ 5 ]);
     }
+
+
+ fprintf(stdout,"%s %s %s %s %s\n",argv[0], argv [1], clinput->gradesfile, 
+ clinput->bankfile, clinput->reportfile);
 
 }
 
@@ -440,9 +444,32 @@ char *pronoun_gender(char *gender, char *name, char *str)
 
 /*********************************************************************************
 *********************************************************************************/
+/* http://cboard.cprogramming.com/c-programming
+/142866-removing-substring-string.html */
+
+int strRemoveAll(char *src,char *key)
+{
+  while( *src )
+  {
+    char *k=key,*s=src;
+    while( *k && *k==*s ) ++k,++s;
+    if( !*k )
+    {
+      while( *s ) *src++=*s++;
+      *src=0;
+      return 1;
+    }
+    ++src;
+  }
+  return 0;
+}
+
+/*********************************************************************************
+*********************************************************************************/
 
 /* Routine for replaceing part of a string is taken from:
-http://stackoverflow.com/questions/779875/what-is-the-function-to-replace-string-in-c 
+http://stackoverflow.com/questions/779875/
+what-is-the-function-to-replace-string-in-c 
 */
 
 char *str_replace(char *orig, char *rep, char *with) {
@@ -482,5 +509,27 @@ char *str_replace(char *orig, char *rep, char *with) {
     }
     strcpy(tmp, orig);
     return result;
+}
+
+/*********************************************************************************
+*********************************************************************************/
+
+/* http://stackoverflow.com/questions/122616/
+how-do-i-trim-leading-trailing-whitespace-in-a-standard-way */
+
+char *strtrim(char *str)
+{
+  char *end;
+
+  while(isspace(*str)) str++;
+
+  if(*str == 0)  
+    return str;
+
+  end = str + strlen(str) - 1;
+  while(end > str && isspace(*end)) end--;
+  *(end+1) = 0;
+
+  return str;
 }
 
